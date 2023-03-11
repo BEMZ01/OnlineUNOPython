@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ room.name }}</title>
+    <script>
+        // On page load, check if the user is already in the room by sending a request to the server
+        let title = document.getElementsByTagName("title")[0].innerHTML;
+        console.log(title);
+        console.log({{ room.name }});
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", "/room/{{ room.name }}/api/players");
+        xhr.send();
+        xhr.responseType = "json";
+        xhr.onload = () => {
+            if (xhr.status === 200) {
+                // If the user is already in the room, pass
+                console.log("User is already in the room");
+            } else if (xhr.status === 404) {
+                // If the user is not in the room, send a request to the server to add the IP address to the room
+                const xhr2 = new XMLHttpRequest();
+                xhr2.open("POST", "/room/{{ room.name }}/api/players");
+                xhr2.send();
+                xhr2.responseType = "json";
+                xhr2.onload = () => {
+                    if (xhr2.status === 200) {
+                        console.log("User added to room");
+                    } else if (xhr2.status === 404) {
+                        console.log("Room not found");
+                    } else {
+                        console.log("Error: " + xhr2.status);
+                    }
+                }
+            } else {
+                console.log("Error: " + xhr.status);
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>UNO</h1>
+    <p>Room Code: {{ room.code }}</p>
+    <p>Room Name: {{ room.name }}</p>
+    <p>Players:</p>
+    <ul>
+        {% for player in room.players %}
+            <li>{{ player.name }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

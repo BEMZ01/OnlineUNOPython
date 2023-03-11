@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OnlineUNOPython</title>
+</head>
+<body>
+    <h1>Welcome {{ username }} to OnlineUNOPython!</h1>
+    <p>OnlineUNOPython is a web application that allows you to play the card game UNO with other players online.</p>
+    <p>It is currently in development.</p>
+    <p>For more information, please visit the <a href="{{ url_for('about') }}">About</a> page.</p>
+    <p>Edit your settings: <a href="{{ url_for('settings') }}">Here</a></p>
+    <p>Current Rooms:</p>
+    <ul>
+        {% for room in rooms %}
+            <li><a href="{{ url_for('room', room_name=room.name) }}">{{ room.name }}</a></li>
+        {% endfor %}
+    </ul>
+    <form action="{{ url_for('create_room') }}" method="post">
+        <input type="text" name="name" placeholder="Room Name">
+        <input type="password" name="password" placeholder="Open Party (No Password)">
+        <input type="submit" value="Create Room">
+    </form>
+</body>
+</html>
