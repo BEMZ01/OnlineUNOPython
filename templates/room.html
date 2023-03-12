@@ -4,48 +4,173 @@
     <meta charset="UTF-8">
     <title>{{ room.name }}</title>
     <script>
-        // On page load, check if the user is already in the room by sending a request to the server
-        let title = document.getElementsByTagName("title")[0].innerHTML;
-        console.log(title);
-        console.log({{ room.name }});
-        const xhr = new XMLHttpRequest();
-        xhr.open("GET", "/room/{{ room.name }}/api/players");
-        xhr.send();
-        xhr.responseType = "json";
-        xhr.onload = () => {
-            if (xhr.status === 200) {
-                // If the user is already in the room, pass
-                console.log("User is already in the room");
-            } else if (xhr.status === 404) {
-                // If the user is not in the room, send a request to the server to add the IP address to the room
-                const xhr2 = new XMLHttpRequest();
-                xhr2.open("POST", "/room/{{ room.name }}/api/players");
-                xhr2.send();
-                xhr2.responseType = "json";
-                xhr2.onload = () => {
-                    if (xhr2.status === 200) {
-                        console.log("User added to room");
-                    } else if (xhr2.status === 404) {
-                        console.log("Room not found");
-                    } else {
-                        console.log("Error: " + xhr2.status);
+            console.log("{{ room.name }}");
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", "/room/{{ room.name }}/api/players");
+            xhr.send();
+            xhr.responseType = "json";
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    let response = xhr.response;
+                    console.log(xhr.response);
+                    let userInRoom = false;
+                    for (let i = 0; i < response.length; i++) {
+                        if (response[i].name === "{{ username }}") {
+                            userInRoom = true;
+                            break;
+                        }
                     }
+                    if (userInRoom) {
+                        // If the user is already in the room, build the player list
+                        console.log("User is in the room, building player list");
+                        let playerList = document.getElementsByTagName("ul")[0];
+                        playerList.innerHTML = "";
+                        for (let i = 0; i < response.length; i++) {
+                            let player = document.createElement("li");
+                            console.log(response[i]);
+                            if (response[i].isHost === true) {
+                                player.style.color = "red";
+                                player.innerHTML = response[i].name + " (Host)";
+                            } else {
+                                player.style.color = "blue";
+                                player.innerHTML = response[i].name + " (Player)";
+                            }
+                            playerList.appendChild(player);
+                        }
+                    } else {
+                        console.log("User is not in the room, adding user to room");
+                        // If the user is not in the room, send a request to the server to add the IP address to the room
+                        const xhr2 = new XMLHttpRequest();
+                        xhr2.open("POST", "/room/{{ room.name }}/api/players");
+                        xhr2.send();
+                        xhr2.responseType = "json";
+                        xhr2.onload = () => {
+                            if (xhr2.status === 201) {
+                                console.log("User added to room");
+                                location.reload();
+                            } else if (xhr2.status === 404) {
+                                console.log("Room not found");
+                            } else {
+                                console.log("Error: " + xhr2.status);
+                            }
+                        }
+                    }
+                } else {
+                    console.log("Error: " + xhr.status);
                 }
-            } else {
-                console.log("Error: " + xhr.status);
             }
-        }
-    </script>
+
+            // function that is called when host clicks "Modify Room"
+            function modifyRoom() {
+                let sett = new XMLHttpRequest();
+                sett.open("GET", "/room/{{ room.name }}/api/settings");
+                sett.send();
+                sett.responseType = "json";
+                sett.onload = () => {
+                    if (sett.status === 200) {
+                        let response = sett.response;
+                        console.log(sett.response);
+                        let roomSettings = document.getElementById("roomSettings");
+                        roomSettings.innerHTML = "";
+                        // create a form that the host can modify
+                        let form = document.createElement("form");
+                        form.action = "/room/{{ room.name }}/api/settings";
+                        form.method = "post";
+                        // create a label for each setting
+                        let label1 = document.createElement("label");
+                        label1.for = "AllowBlankCards";
+                        label1.innerHTML = "Allow Blank Cards: ";
+                        let label2 = document.createElement("label");
+                        label2.for = "MaxPlayers";
+                        label2.innerHTML = "Max Players: ";
+                        let label3 = document.createElement("label");
+                        label3.for = "MaxRounds";
+                        label3.innerHTML = "Max Rounds: ";
+                        let label4 = document.createElement("label");
+                        label4.for = "MaxStack";
+                        label4.innerHTML = "Max Stack: ";
+                        // create a checkbox for the first setting, and a number input for the other 3
+                        let checkbox1 = document.createElement("input");
+                        checkbox1.type = "checkbox";
+                        checkbox1.name = "AllowBlankCards";
+                        checkbox1.id = "AllowBlankCards";
+                        checkbox1.checked = response["AllowBlankCards"];
+                        let input2 = document.createElement("input");
+                        input2.type = "number";
+                        input2.name = "MaxPlayers";
+                        input2.id = "MaxPlayers";
+                        input2.value = response["MaxPlayers"];
+                        let input3 = document.createElement("input");
+                        input3.type = "number";
+                        input3.name = "MaxRounds";
+                        input3.id = "MaxRounds";
+                        input3.value = response["MaxRounds"];
+                        let input4 = document.createElement("input");
+                        input4.type = "number";
+                        input4.name = "MaxStack";
+                        input4.id = "MaxStack";
+                        input4.value = response["MaxStack"];
+                        // create a submit button
+                        let submit = document.createElement("input");
+                        submit.type = "submit";
+                        submit.value = "Submit";
+                        // append all the elements to the form
+                        form.appendChild(label1);
+                        form.appendChild(checkbox1);
+                        form.appendChild(document.createElement("br"));
+                        form.appendChild(label2);
+                        form.appendChild(input2);
+                        form.appendChild(document.createElement("br"));
+                        form.appendChild(label3);
+                        form.appendChild(input3);
+                        form.appendChild(document.createElement("br"));
+                        form.appendChild(label4);
+                        form.appendChild(input4);
+                        form.appendChild(document.createElement("br"));
+                        form.appendChild(submit);
+                        // append the form to the roomSettings div
+                        roomSettings.appendChild(form);
+                    } else {
+                        console.log("Error: " + sett.status);
+                    }
+            }
+            }
+        </script>
+    {% if game_started %}
+        <script>
+            alert("Game has already started");
+            window.location.href = document.referrer;
+        </script>
+    {% elif player %}
+        <script>
+            //alert("You are a player in this room");
+        </script>
+    {% elif host %}
+        <script>
+            //alert("You are the host of this room");
+        </script>
+    {% endif %}
 </head>
 <body>
     <h1>UNO</h1>
-    <p>Room Code: {{ room.code }}</p>
     <p>Room Name: {{ room.name }}</p>
     <p>Players:</p>
     <ul>
-        {% for player in room.players %}
-            <li>{{ player.name }}</li>
-        {% endfor %}
+        Loading...
     </ul>
+    {% if host %}
+        <form action="{{ url_for('api_start_game', room_name=room.name) }}" method="post">
+            <input type="submit" value="Start Game">
+        </form>
+        <form action="{{ url_for('api_leave', room_name=room.name) }}" method="post">
+            <input type="submit" value="Disband Room">
+        </form>
+    <div id="roomSettings">
+            <button onclick="modifyRoom()">Modify Room</button>
+{% elif player %}
+        <form action="{{ url_for('api_leave', room_name=room.name) }}" method="post">
+            <input type="submit" value="Leave Room">
+        </form>
+    {% endif %}
 </body>
 </html>

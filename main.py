@@ -241,9 +241,24 @@ class Game_Host:
 
 
 class Client:
-    def __init__(self, ip_address, name=None):
+    def __init__(self, ip_address):
         self.ip_address = ip_address
-        self.name = name
+        self.name = get_username(ip_address)
+
+    def __str__(self):
+        return self.ip_address
+
+    def __iter__(self):
+        return iter([self.ip_address, self.name])
+
+    def __eq__(self, other):
+        return self.ip_address == other.ip_address and self.name == other.name
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __repr__(self):
+        return str(self.__dict__)
 
 
 class Room:
@@ -253,6 +268,7 @@ class Room:
         self.password = password
         self.players = []
         self.game = Game_Host()
+        self.game_started = False
 
     def add_player(self, player):
         self.players.append(player)
@@ -262,6 +278,7 @@ class Room:
 
     def start_game(self):
         self.game.start_game()
+        self.game_started = True
 
     def modify_settings(self, settings):
         self.game.settings = settings
@@ -323,7 +340,6 @@ def set_username(ip_address, name):
 def create_room():
     global rooms
     data = request.form.to_dict()
-    pprint(data)
     rooms.create_room(data["name"], request.remote_addr, data["password"])
     return redirect(url_for("index"))
 
@@ -343,7 +359,21 @@ def about():
 def room(room_name):
     global rooms
     room = rooms.get_room(room_name)
-    return render_template("room.html", room=room)
+    try:
+        room.game_started
+    except AttributeError:
+        # Room doesn't exist
+        return redirect(url_for("index"))
+    if not room.game_started:
+        if request.remote_addr == room.host:
+            return render_template("room.html", room=room, username=get_username(request.remote_addr), host=True)
+        # else if the ip address is in the room, render the player page
+        elif request.remote_addr in [player.ip_address for player in room.players]:
+            return render_template("room.html", room=room, username=get_username(request.remote_addr), player=True)
+        else:
+            return render_template("room.html", room=room, username=get_username(request.remote_addr))
+    else:
+        return render_template("room.html", room=room, username=get_username(request.remote_addr), game_started=True)
 
 
 @app.route("/room/<room_name>/api/players", methods=["GET", "POST"])
@@ -351,12 +381,69 @@ def api_players(room_name):
     global rooms
     room = rooms.get_room(room_name)
     if request.method == "GET":
-        return jsonify(room.players)
+        out = []
+        for player in room.players:
+            out.append({
+                "name": player.name,
+                "isHost": player.ip_address == room.host
+            })
+        return jsonify(out)
+
+    else:
+        room.add_player(Client(request.remote_addr))
+        return "", 201
+
+
+@app.route("/room/<room_name>/api/settings", methods=["GET", "POST"])
+def api_settings(room_name):
+    global rooms
+    room = rooms.get_room(room_name)
+    if request.remote_addr != room.host:
+        return "", 403
+    if request.method == "GET":
+        return jsonify(room.get_settings())
     else:
         data = request.form.to_dict()
-        pprint(data)
-        room.add_player(Client(request.remote_addr, data["name"]))
+        try:
+            data["AllowBlankCards"]
+        except KeyError:
+            room.modify_settings({
+                "MaxPlayers": int(data["MaxPlayers"]),
+                "MaxRounds": int(data["MaxRounds"]),
+                "MaxStack": int(data["MaxStack"]),
+                "AllowBlankCards": False
+            })
+        else:
+            room.modify_settings({
+                "MaxPlayers": int(data["MaxPlayers"]),
+                "MaxRounds": int(data["MaxRounds"]),
+                "MaxStack": int(data["MaxStack"]),
+                "AllowBlankCards": True
+            })
         return redirect(url_for("room", room_name=room_name))
+
+
+@app.route("/room/<room_name>/api/start_game", methods=["POST"])
+def api_start_game(room_name):
+    global rooms
+    room = rooms.get_room(room_name)
+    if request.remote_addr != room.host:
+        return "", 403
+    else:
+        room.start_game()
+        return "", 201
+
+
+@app.route("/room/<room_name>/api/leave", methods=["POST"])
+def api_leave(room_name):
+    global rooms
+    room = rooms.get_room(room_name)
+    if request.remote_addr == room.host:
+        rooms.delete_room(room_name)
+        return redirect(url_for("index"))
+    else:
+        room.remove_player(request.remote_addr)
+        return redirect(url_for("index"))
 
 
 @app.route("/settings", methods=["GET", "POST"])
@@ -365,9 +452,15 @@ def settings():
         return render_template("settings.html", username=get_username(request.remote_addr), address=request.remote_addr)
     else:
         data = request.form.to_dict()
-        pprint(data)
         set_username(request.remote_addr, data["username"])
         return redirect(url_for("index"))
+
+
+@app.route("/room/<room_name>/api/status", methods=["GET"])
+def api_status(room_name):
+    global rooms
+    room = rooms.get_room(room_name)
+    ...
 
 
 if __name__ == "__main__":
