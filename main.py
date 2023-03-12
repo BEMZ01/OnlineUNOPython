@@ -1,7 +1,11 @@
 import json
 import random
+import sys
+import time
+
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from pprint import pprint
+import datetime as dt
 
 #########################################
 # A standard UNO deck contains:         #
@@ -50,7 +54,10 @@ class Deck:
         random.shuffle(self.cards)
 
     def GetTopCard(self):
-        return self.cards[0]
+        try:
+            return self.cards[0]
+        except IndexError:
+            return None
 
     def insertAt(self, i, card):
         self.cards.insert(i, card)
@@ -69,6 +76,7 @@ class Game:
         self.settings = settings
         self.MainDeck = Deck()
         self.DiscardDeck = Deck()
+        self.current_turn = 0
         colors = ["Red", "Green", "Blue", "Yellow"]
         for color in colors:
             for i in range(0, 10):
@@ -117,122 +125,145 @@ class Game:
 
 
 class Player:
-    def __init__(self, name):
+    def __init__(self, name, address):
         self.name = name
         self.hand = Deck()
+        self.address = address
 
     def __str__(self):
         return self.name
 
 
 class Game_Host:
-    def __init__(self, AllowBlankCards=True, MaxPlayers=10, MaxRounds=100, MaxStack=3):
+    def __init__(self, AllowBlankCards=False, MaxPlayers=10, MaxRounds=100, MaxStack=3, StartingCards=7):
+        self.winner = None
         self.settings = {
             "AllowBlankCards": AllowBlankCards,
             "MaxPlayers": MaxPlayers,
             "MaxRounds": MaxRounds,
-            "MaxStack": MaxStack
+            "MaxStack": MaxStack,
+            "StartingCards": StartingCards,
         }
         self.game = Game(self.settings, [])
+        self.toSend = []
+        self.started = False
 
-    def start_game(self):
-        print("Welcome to UNO!")
-        print("How many players are there?")
-        while True:
-            try:
-                player_count = int(input())
-                if player_count > self.settings["MaxPlayers"]:
-                    print("Too many players! Max is " + str(self.settings["MaxPlayers"]))
-                elif player_count < 2:
-                    print("Not enough players! Min is 2")
-                else:
-                    break
-            except ValueError:
-                print("Please enter a number!")
-        for i in range(0, player_count):
-            self.game.players.append(Player("Player " + str(i + 1) + ""))
-        print("Starting game with " + str(player_count) + " players!")
+    def start_game(self, players):
+        self.started = True
+        for player in players:
+            self.game.players.append(Player(player.name, player.ip_address))
         self.game.MainDeck.shuffle()
         for player in self.game.players:
-            for i in range(0, 7):
+            for i in range(0, self.settings["StartingCards"]):
                 player.hand.insertAt(0, self.game.MainDeck.cards.pop())
         self.game.DiscardDeck.cards.append(self.game.MainDeck.cards.pop())
-        while True:
+        return self.game
+
+    def play_card(self, player_address, cardIndex, wild_choice=None):
+        if self.started:
             for player in self.game.players:
-                if self.game.DiscardDeck.GetTopCard().type == "Wild" or self.game.DiscardDeck.GetTopCard().type == "Wild-Draw-Four":
-                    print("The top card is a Wild card! What color would you like to change it to?")
-                    while True:
-                        color = input()
-                        if color.lower() == "red" or color.lower() == "blue" or color.lower() == "green" or color.lower() == "yellow":
-                            break
-                        else:
-                            print("Please enter a valid color!")
-                    self.game.DiscardDeck.GetTopCard().color = color.title()
-                if self.game.DiscardDeck.GetTopCard().type == "Reverse":
-                    print("The direction of play has been reversed!")
-                print(player.name + "'s turn!")
-                if self.game.CurrentStackCount > 0:
-                    # If there is a stack, tell the player how many cards they have to draw
-                    print("You have to draw " + str(self.game.CurrentStackCount) + " cards!")
-                    for i in range(0, self.game.CurrentStackCount):
-                        player.hand.cards.append(self.game.MainDeck.cards.pop())
-                    self.game.CurrentStackCount = 0
-                if self.game.SkipNextPlayer:
-                    print("You have to skip your next turn!")
-                    self.game.SkipNextPlayer = False
-                    break
-                print("Your hand is: ")
-                for card in player.hand.cards:
-                    print(str(player.hand.cards.index(card)) + ": " + str(card))
-                print("The top card is: " + str(self.game.DiscardDeck.GetTopCard()))
-                print("What card do you want to play?")
-                while True:  # Input validation
+                if player.address == player_address and self.game.players[
+                    self.game.current_turn].address == player_address:
                     try:
-                        card_number = input()
-                        try:
-                            card_number = int(card_number)
-                        except ValueError:
-                            if card_number == "draw":
-                                player.hand.cards.append(self.game.MainDeck.cards.pop())
-                                break
-                            else:
-                                print("Please enter a number!")
-                                continue
-                        if card_number > len(player.hand.cards):
-                            print("That card doesn't exist!")
+                        player.hand.GetCardAt(cardIndex)
+                    except IndexError:
+                        if str(len(player.hand.cards)) == str(cardIndex):
+                            player.hand.cards.append(self.game.MainDeck.cards.pop())
+                            self.advance_turn()
+                            return True, "Card drew from MainDeck!"
                         else:
-                            card = player.hand.GetCardAt(card_number)
-                            if not self.game.checkLegalMove(card):
-                                print("That card is not legal!")
+                            return False, "Card index out of range!"
+                    card = player.hand.GetCardAt(cardIndex)
+                    if self.game.checkLegalMove(card):
+                        player.hand.cards.remove(card)
+                        self.game.DiscardDeck.cards.insert(0, card)
+                        if card.type == "Wild" or card.type == "Wild-Draw-Four":
+                            if wild_choice is None:
+                                return False, "You must choose a color!"
                             else:
-                                break
-                    except ValueError:
-                        print("Please enter a number!")
-                if type(card_number) == int:
-                    card = player.hand.cards.pop(card_number)
-                    # Add the card to the top of the discard deck
-                    self.game.DiscardDeck.insertAt(0, card)
-                if len(player.hand.cards) == 0:
-                    print("Congratulations! You won!")
-                    return
-                if type(card_number) == int:  # If the player didn't draw a card
-                    top_card = self.game.DiscardDeck.GetTopCard()
-                    if top_card.type == "Draw-Two":
-                        self.game.CurrentStackCount += 2
-                    elif top_card.type == "Wild-Draw-Four":
-                        self.game.CurrentStackCount += 4
-                    elif top_card.type == "Skip":
-                        self.game.SkipNextPlayer = True
-                    elif top_card.type == "Reverse":
-                        self.game.players.reverse()
-                if len(self.game.MainDeck.cards) == 0:
-                    self.game.MainDeck.cards = self.game.DiscardDeck.cards
-                    self.game.DiscardDeck.cards = []
-                    self.game.MainDeck.shuffle()
-                self.game.round += 1
-                if self.game.round > self.settings["MaxRounds"]:
-                    print("Game ended in a draw!")
-                    return
+                                card.color = wild_choice
+                        if card.type == "Reverse":
+                            self.game.players.reverse()
+                        if card.type == "Skip":
+                            self.game.SkipNextPlayer = True
+                        if card.type == "Draw-Two":
+                            self.game.CurrentStackCount += 2
+                        if card.type == "Wild-Draw-Four":
+                            self.game.CurrentStackCount += 4
+                        self.advance_turn()
+                        return True, "Card played successfully!"
+                    else:
+                        return False, "Illegal move!"
+
+    def draw_card(self, player_address):
+        if self.started:
+            for player in self.game.players:
+                if player.address == player_address and self.game.players[
+                    self.game.current_turn].address == player_address:
+                    player.hand.cards.append(self.game.MainDeck.cards.pop())
+                    return True, "Card drawn successfully!"
+        return False, "False"
+
+    def advance_turn(self):
+        # This function is called when the current player is done playing their turn
+        if self.started:
+            if len(self.game.MainDeck.cards) == 0:
+                self.game.MainDeck.cards = self.game.DiscardDeck.cards
+                self.game.DiscardDeck.cards = []
+                self.game.MainDeck.shuffle()
+            self.game.round += 1
+            if self.game.round >= self.settings["MaxRounds"]:
+                self.started = False
+                return True, "Game over!"
+            ###
+            if self.game.DiscardDeck.GetTopCard().type == "Reverse":
+                self.game.players.reverse()
+            self.game.current_turn += 1
+            if self.game.current_turn >= len(self.game.players):
+                self.game.current_turn = 0
+            if self.game.CurrentStackCount > 0:
+                for i in range(0, self.game.CurrentStackCount):
+                    self.game.players[self.game.current_turn].hand.cards.append(self.game.MainDeck.cards.pop())
+                self.game.CurrentStackCount = 0
+            if self.game.SkipNextPlayer:
+                self.game.current_turn += 1
+                if self.game.current_turn >= len(self.game.players):
+                    self.game.current_turn = 0
+                self.game.SkipNextPlayer = False
+            if len(self.game.players[self.game.current_turn].hand.cards) == 0:
+                self.started = False
+                self.winner = self.game.players[self.game.current_turn]
+                return True, "Game over!"
+
+    def get_status(self, player_address):
+        # Returns a dictionary containing the status of the game, along with information about the players
+        # This is sent to the client
+        status = {
+            "winner": self.winner.name if self.winner is not None else None,
+            "players": [],
+            "top_card": str(self.game.DiscardDeck.GetTopCard()),
+            "round": self.game.round,
+            "max_rounds": self.settings["MaxRounds"],
+            "stack_count": self.game.CurrentStackCount,
+            "skip_next_player": self.game.SkipNextPlayer,
+            "main_deck_size": len(self.game.MainDeck.cards),
+            "discard_deck_size": len(self.game.DiscardDeck.cards)}
+        for player in self.game.players:
+            status["players"].append({"name": player.name, "hand_size": len(player.hand.cards)})
+        try:
+            status["player_turn"] = {
+                "name": self.game.players[self.game.current_turn].name,
+                "hand_size": len(self.game.players[self.game.current_turn].hand.cards)
+            }
+        except IndexError:
+            status["player_turn"] = {}
+        status["player_hand"] = []
+        # find the player using player_name
+        for player in self.game.players:
+            if player.address == player_address:
+                for card in player.hand.cards:
+                    status["player_hand"].append(str(card))
+        return status
 
 
 #######################
@@ -269,15 +300,19 @@ class Room:
         self.players = []
         self.game = Game_Host()
         self.game_started = False
+        self.hb_timings = {}
 
     def add_player(self, player):
         self.players.append(player)
+        self.hb_timings[player.ip_address] = time.time()
 
     def remove_player(self, player):
         self.players.remove(player)
+        if player.ip_address in self.hb_timings:
+            del self.hb_timings[player.ip_address]
 
     def start_game(self):
-        self.game.start_game()
+        self.game.start_game(self.players)
         self.game_started = True
 
     def modify_settings(self, settings):
@@ -285,6 +320,24 @@ class Room:
 
     def get_settings(self):
         return self.game.settings
+
+    def get_status(self, player_name):
+        return {
+            "players": self.players,
+            "game_started": self.game_started,
+            "game_status": self.game.get_status(player_name)
+        }
+
+    def heartbeat(self, address):
+        # get the current seconds since the epoch
+        ct = time.time()
+        self.hb_timings[address] = time.time()
+        for player in self.players:
+            if player.ip_address in self.hb_timings:
+                if ct - self.hb_timings[player.ip_address] > 10:
+                    print("Player " + player.name + " timed out! (Room: " + self.name + ")")
+                    self.remove_player(player)
+        return True
 
 
 class Room_Manager:
@@ -376,6 +429,21 @@ def room(room_name):
         return render_template("room.html", room=room, username=get_username(request.remote_addr), game_started=True)
 
 
+@app.route("/room/<room_name>/game")
+def game(room_name):
+    global rooms
+    room = rooms.get_room(room_name)
+    try:
+        room.game_started
+    except AttributeError:
+        # Room doesn't exist
+        return redirect(url_for("index"))
+    if room.game_started:
+        return render_template("game.html", room=room, username=get_username(request.remote_addr))
+    else:
+        return redirect(url_for("room", room_name=room_name))
+
+
 @app.route("/room/<room_name>/api/players", methods=["GET", "POST"])
 def api_players(room_name):
     global rooms
@@ -411,14 +479,16 @@ def api_settings(room_name):
                 "MaxPlayers": int(data["MaxPlayers"]),
                 "MaxRounds": int(data["MaxRounds"]),
                 "MaxStack": int(data["MaxStack"]),
-                "AllowBlankCards": False
+                "AllowBlankCards": False,
+                "StartingCards": int(data["StartingCards"])
             })
         else:
             room.modify_settings({
                 "MaxPlayers": int(data["MaxPlayers"]),
                 "MaxRounds": int(data["MaxRounds"]),
                 "MaxStack": int(data["MaxStack"]),
-                "AllowBlankCards": True
+                "AllowBlankCards": True,
+                "StartingCards": int(data["StartingCards"])
             })
         return redirect(url_for("room", room_name=room_name))
 
@@ -431,7 +501,7 @@ def api_start_game(room_name):
         return "", 403
     else:
         room.start_game()
-        return "", 201
+        return redirect(url_for("game", room_name=room_name))
 
 
 @app.route("/room/<room_name>/api/leave", methods=["POST"])
@@ -456,11 +526,50 @@ def settings():
         return redirect(url_for("index"))
 
 
-@app.route("/room/<room_name>/api/status", methods=["GET"])
-def api_status(room_name):
+@app.route("/room/<room_name>/api/heartbeat", methods=["GET"])
+def api_heartbeat(room_name):
+    """When a client joins a room, they send a heartbeat every 5 seconds to notify the server that they are still connected.
+    If the server doesn't receive a heartbeat for 10 seconds, the client is disconnected from the room."""
     global rooms
     room = rooms.get_room(room_name)
-    ...
+    if request.remote_addr in [player.ip_address for player in room.players]:
+        hb = room.heartbeat(request.remote_addr)
+        if hb:
+            # If the heartbeat is successful, return the current state of the game
+            return jsonify(room.game.get_status(request.remote_addr)), 200
+        else:
+            return "", 403
+    else:
+        return "", 403
+
+
+@app.route("/room/<room_name>/api/lobby_info", methods=["GET"])
+def api_lobby_info(room_name):
+    global rooms
+    room = rooms.get_room(room_name)
+    if request.remote_addr in [player.ip_address for player in room.players]:
+        return jsonify(room.get_status(request.remote_addr)), 200
+    else:
+        return "", 403
+
+
+@app.route("/room/<room_name>/api/play_card", methods=["POST"])
+def api_play_card(room_name):
+    global rooms
+    room = rooms.get_room(room_name)
+    if request.remote_addr in [player.ip_address for player in room.players] and request.remote_addr == room.players[
+        room.game.game.current_turn].ip_address:
+        cardIndex = str(request.data).replace("card", "").replace("=", "").replace("b", "").replace("'", "")
+        if " " in cardIndex:
+            play = room.game.play_card(request.remote_addr, int(cardIndex.split(" ")[0]), str(cardIndex.split(" ")[1]))
+        else:
+            play = room.game.play_card(request.remote_addr, int(cardIndex))
+        if play[0]:
+            return play[1], 200
+        else:
+            return play[1], 404
+    else:
+        return "error", 403
 
 
 if __name__ == "__main__":

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ room.name }}</title>
+    <script>
+        function toTitleCase(str) {
+            return str.replace(/\w\S*/g, function(txt) {
+                return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+                }
+            );
+        }
+        // Script to call to send a request to heartbeat every 5 seconds
+        setInterval(function() {
+            let xhr = new XMLHttpRequest();
+            xhr.open("GET", "/room/{{ room.name }}/api/heartbeat");
+            xhr.send();
+            xhr.responseType = "json";
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    console.log("Heartbeat OK");
+                    // Update the game info
+                    let toRender = [];
+                    toRender.push("<p>Room Name: {{ room.name }}</p>");
+                    console.log(xhr.response);
+                    toRender.push("<p>Discard Pile: " + xhr.response["discard_deck_size"] + "</p>");
+                    toRender.push("<p>Main Pile: " + xhr.response["main_deck_size"] + "</p>");
+                    toRender.push("<p>Current Player: " + xhr.response["player_turn"]["name"] + " (" + xhr.response["player_turn"]["hand_size"] + ")</p>");
+                    // get the top card and split it into the color and the value (the first space)
+                    let topCard = xhr.response["top_card"];
+                    let topCardColor = topCard.split(" ")[1];
+                    let topCardValue = topCard.split(" ")[0];
+                    toRender.push("<p>Top Card: <span style='color:" + topCardColor + "'>" + topCardValue + "</span></p>");
+                    let gameInfo = document.getElementById("gameInfo");
+                    gameInfo.innerHTML = toRender.join("");
+                    // Update the hand
+                    let hand = document.getElementById("hand");
+                    hand.innerHTML = "";
+                    let handCards = xhr.response["player_hand"];
+                    handCards.push("draw black");
+                    for (let i = 0; i < handCards.length; i++) {
+                        let card = handCards[i];
+                        let cardColor = card.split(" ")[1];
+                        let cardValue = card.split(" ")[0];
+                        let cardDiv = document.createElement("div");
+                        cardDiv.className = "card"+i;
+                        cardDiv.style.backgroundColor = cardColor;
+                        cardDiv.style.width = "100px";
+                        cardDiv.style.height = "150px";
+                        cardDiv.style.borderRadius = "10px";
+                        cardDiv.style.border = "1px solid black";
+                        cardDiv.style.display = "inline-block";
+                        cardDiv.style.margin = "10px";
+                        let cardButton = document.createElement("button");
+                        cardButton.onclick = function() {
+                            playCard(this.parentElement);
+                        };
+                        let cardText = document.createElement("p");
+                        cardText.style.color = "black";
+                        cardText.style.height = "auto";
+                        cardText.style.width = "100%";
+                        cardText.innerHTML = cardValue;
+                        cardButton.appendChild(cardText);
+                        cardDiv.appendChild(cardButton);
+                        hand.appendChild(cardDiv);
+                    }
+                } else if (xhr.status === 404) {
+                    console.log("Room not found");
+                } else {
+                    console.log("Error: " + xhr.status);
+                }
+            }
+        }, 1000);
+
+        // Function to send a request to play a card
+        function playCard(card) {
+            // if the background color is black and children do not contain the substring "draw"
+            if (card.style.backgroundColor === "black" && card.children[0].innerHTML.indexOf("draw") === -1) {
+                // get the color from the user
+                let color = prompt("What color do you want to play?").toLowerCase();
+                // if the color is valid
+                if (color === "red" || color === "blue" || color === "green" || color === "yellow") {
+                    // set the background color to the color
+                    let xhr = new XMLHttpRequest();
+                    xhr.open("POST", "/room/{{ room.name }}/api/play_card");
+                    xhr.send(card.className + " " + toTitleCase(color));
+                    xhr.responseType = "json";
+                    xhr.onload = () => {
+                        if (xhr.status === 200) {
+                            console.log("Card played");
+                        } else if (xhr.status === 404) {
+                            console.log("Room not found");
+                        } else {
+                            console.log("Error: " + xhr.status);
+                        }
+                    }
+                }
+            }
+            else {
+                let xhr = new XMLHttpRequest();
+                xhr.open("POST", "/room/{{ room.name }}/api/play_card");
+                console.log(card.className)
+                xhr.send(card.className);
+                xhr.responseType = "json";
+                xhr.onload = () => {
+                    if (xhr.status === 200) {
+                        console.log("Card played");
+                    } else if (xhr.status === 404) {
+                        console.log("Room not found");
+                    } else {
+                        console.log("Error: " + xhr.status);
+                    }
+                }
+            }
+        }
+    </script>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+</head>
+<body>
+    <div id="gameInfo">
+    </div>
+    <div id="hand">
+    </div>
+</body>
+</html>

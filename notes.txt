@@ -1,0 +1,8 @@
+What the client needs to see:
+ - Current players turn
+ - Their hand
+ - The top card
+ - Other players hand sizes
+
+What the server requests:
+ - Player's choice of card / draw

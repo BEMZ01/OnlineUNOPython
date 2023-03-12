@@ -23,7 +23,7 @@
                     if (userInRoom) {
                         // If the user is already in the room, build the player list
                         console.log("User is in the room, building player list");
-                        let playerList = document.getElementsByTagName("ul")[0];
+                        let playerList = document.getElementById("PlayerList");
                         playerList.innerHTML = "";
                         for (let i = 0; i < response.length; i++) {
                             let player = document.createElement("li");
@@ -89,7 +89,9 @@
                         let label4 = document.createElement("label");
                         label4.for = "MaxStack";
                         label4.innerHTML = "Max Stack: ";
-                        // create a checkbox for the first setting, and a number input for the other 3
+                        let label5 = document.createElement("label");
+                        label5.for = "StartingCards";
+                        label5.innerHTML = "Starting Cards: ";
                         let checkbox1 = document.createElement("input");
                         checkbox1.type = "checkbox";
                         checkbox1.name = "AllowBlankCards";
@@ -110,7 +112,11 @@
                         input4.name = "MaxStack";
                         input4.id = "MaxStack";
                         input4.value = response["MaxStack"];
-                        // create a submit button
+                        let input5 = document.createElement("input");
+                        input5.type = "number";
+                        input5.name = "StartingCards";
+                        input5.id = "StartingCards";
+                        input5.value = response["StartingCards"];
                         let submit = document.createElement("input");
                         submit.type = "submit";
                         submit.value = "Submit";
@@ -127,6 +133,9 @@
                         form.appendChild(label4);
                         form.appendChild(input4);
                         form.appendChild(document.createElement("br"));
+                        form.appendChild(label5);
+                        form.appendChild(input5);
+                        form.appendChild(document.createElement("br"));
                         form.appendChild(submit);
                         // append the form to the roomSettings div
                         roomSettings.appendChild(form);
@@ -136,6 +145,25 @@
             }
             }
         </script>
+    <script>
+        // Script to call to send a request to heartbeat every 5 seconds
+        setInterval(function() {
+            let xhr = new XMLHttpRequest();
+            xhr.open("GET", "/room/{{ room.name }}/api/heartbeat");
+            xhr.send();
+            xhr.responseType = "json";
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    console.log("Heartbeat sent");
+                } else {
+                    console.log("Error: " + xhr.status);
+                }
+            }
+        }, 5000);
+    </script>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     {% if game_started %}
         <script>
             alert("Game has already started");
@@ -155,7 +183,7 @@
     <h1>UNO</h1>
     <p>Room Name: {{ room.name }}</p>
     <p>Players:</p>
-    <ul>
+    <ul id="PlayerList">
         Loading...
     </ul>
     {% if host %}
