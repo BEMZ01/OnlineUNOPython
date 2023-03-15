@@ -1,4 +1,5 @@
 import json
+import os
 import random
 import sys
 import time
@@ -102,18 +103,34 @@ class Game:
         # 3. The card is the same type as the top card and the length
         # 4. The card is a Blank card
         top_card = self.DiscardDeck.GetTopCard()
+        print(top_card.type, card.type)
+        print(top_card.color, card.color)
         if card.type == "Wild" or card.type == "Wild-Draw-Four":
             return True
         elif card.color == top_card.color:
             return True
         elif card.type == top_card.type:
             try:
-                for i in range(0, self.settings["MaxStack"]):
-                    # Check if a plus card is stacked on top of another plus card
-                    if top_card.type == "Draw-Two" or top_card.type == "Skip" or top_card.type == "Reverse":
-                        top_card = self.DiscardDeck.GetCardAt(i + 1)
-                    else:
-                        break
+                # for i in range(0, self.settings["MaxStack"]):
+                #     # Check if a plus card is stacked on top of another plus card
+                #     if top_card.type == "Draw-Two":
+                #         top_card = self.DiscardDeck.GetCardAt(i + 1)
+                #         # THIS IS BUST!
+                #     else:
+                #         break
+                while True:
+                    i = 0
+                    for card in self.DiscardDeck.cards:
+                        if card.type == "Draw-Two":
+                            i += 1
+                        else:
+                            break
+                    print(i)
+                    break
+                if i < self.settings["MaxStack"]:
+                    return True
+                else:
+                    return False
             except IndexError:
                 pass
             if card.type == top_card.type:
@@ -573,5 +590,7 @@ def api_play_card(room_name):
 
 
 if __name__ == "__main__":
+    # print cwd
+    print(os.getcwd())
     rooms = Room_Manager()
-    app.run("0.0.0.0", 5000, debug=True)
+    app.run("0.0.0.0", 8080, debug=True)

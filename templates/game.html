@@ -64,6 +64,10 @@
                         cardDiv.appendChild(cardButton);
                         hand.appendChild(cardDiv);
                     }
+                    if (xhr.response["winner"] !== null) {
+                        alert(xhr.response["winner"] + " has won the game!");
+                        window.location.href = "/";
+                    }
                 } else if (xhr.status === 404) {
                     console.log("Room not found");
                 } else {
