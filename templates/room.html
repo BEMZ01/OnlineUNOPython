@@ -153,7 +153,9 @@
             xhr.send();
             xhr.responseType = "json";
             xhr.onload = () => {
-                if (xhr.status === 200) {
+                if (xhr.status === 200 && xhr.response["top_card"] !== "None") {
+                    window.location.href = window.location.href + "/game";
+                } else if (xhr.status === 200) {
                     console.log("Heartbeat sent");
                 } else {
                     console.log("Error: " + xhr.status);

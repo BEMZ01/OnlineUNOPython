@@ -207,6 +207,9 @@ class Game_Host:
                             self.game.CurrentStackCount += 2
                         if card.type == "Wild-Draw-Four":
                             self.game.CurrentStackCount += 4
+                        if len(self.game.players[self.game.current_turn].hand.cards) == 0:
+                            self.started = False
+                            self.winner = self.game.players[self.game.current_turn]
                         self.advance_turn()
                         return True, "Card played successfully!"
                     else:
@@ -247,9 +250,6 @@ class Game_Host:
                 if self.game.current_turn >= len(self.game.players):
                     self.game.current_turn = 0
                 self.game.SkipNextPlayer = False
-            if len(self.game.players[self.game.current_turn].hand.cards) == 0:
-                self.started = False
-                self.winner = self.game.players[self.game.current_turn]
                 return True, "Game over!"
 
     def get_status(self, player_address):
@@ -331,6 +331,10 @@ class Room:
     def start_game(self):
         self.game.start_game(self.players)
         self.game_started = True
+
+    def reset_game(self):
+        self.game = Game_Host()
+        self.game_started = False
 
     def modify_settings(self, settings):
         self.game.settings = settings
@@ -553,6 +557,10 @@ def api_heartbeat(room_name):
         hb = room.heartbeat(request.remote_addr)
         if hb:
             # If the heartbeat is successful, return the current state of the game
+            data = room.game.get_status(request.remote_addr)
+            if data["winner"]:
+                room.game_started = False
+                room.reset_game()
             return jsonify(room.game.get_status(request.remote_addr)), 200
         else:
             return "", 403
