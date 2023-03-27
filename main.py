@@ -111,13 +111,6 @@ class Game:
             return True
         elif card.type == top_card.type:
             try:
-                # for i in range(0, self.settings["MaxStack"]):
-                #     # Check if a plus card is stacked on top of another plus card
-                #     if top_card.type == "Draw-Two":
-                #         top_card = self.DiscardDeck.GetCardAt(i + 1)
-                #         # THIS IS BUST!
-                #     else:
-                #         break
                 while True:
                     i = 0
                     for card in self.DiscardDeck.cards:
@@ -214,6 +207,7 @@ class Game_Host:
                         return True, "Card played successfully!"
                     else:
                         return False, "Illegal move!"
+        return False, "False"
 
     def draw_card(self, player_address):
         if self.started:
@@ -282,6 +276,20 @@ class Game_Host:
                     status["player_hand"].append(str(card))
         return status
 
+    def remove_player(self, player_address):
+        for player in self.game.players:
+            if player.address == player_address:
+                for card in player.hand.cards:
+                    self.game.DiscardDeck.cards.insert(-1, card)
+                # if the current player is the one being removed, advance the turn
+                if self.game.players[self.game.current_turn].address == player_address:
+                    print("Removing currently playing player, advancing turn!")
+                    self.advance_turn()
+
+                self.game.players.remove(player)
+                return True, "Player removed successfully!"
+        return False, "False"
+
 
 #######################
 #######################
@@ -318,6 +326,7 @@ class Room:
         self.game = Game_Host()
         self.game_started = False
         self.hb_timings = {}
+        self.win_check = False
 
     def add_player(self, player):
         self.players.append(player)
@@ -327,6 +336,7 @@ class Room:
         self.players.remove(player)
         if player.ip_address in self.hb_timings:
             del self.hb_timings[player.ip_address]
+        self.game.remove_player(player.ip_address)
 
     def start_game(self):
         self.game.start_game(self.players)
@@ -381,6 +391,9 @@ class Room_Manager:
     def create_room(self, name, host, password=None):
         if len(password) == 0:
             password = None
+        for room in self.rooms:
+            if room.name == name:
+                return None
         self.rooms.append(Room(name, host, password))
         return self.rooms[-1]
 
@@ -460,7 +473,7 @@ def game(room_name):
         # Room doesn't exist
         return redirect(url_for("index"))
     if room.game_started:
-        return render_template("game.html", room=room, username=get_username(request.remote_addr))
+        return render_template("game.html", room=room, username=get_username(request.remote_addr), host=request.remote_addr == room.host, player=request.remote_addr in [player.ip_address for player in room.players])
     else:
         return redirect(url_for("room", room_name=room_name))
 
@@ -556,9 +569,10 @@ def api_heartbeat(room_name):
     if request.remote_addr in [player.ip_address for player in room.players]:
         hb = room.heartbeat(request.remote_addr)
         if hb:
-            # If the heartbeat is successful, return the current state of the game
             data = room.game.get_status(request.remote_addr)
-            if data["winner"]:
+            if data["winner"] and not room.win_check:
+                room.win_check = True
+            elif room.win_check and data["winner"]:
                 room.game_started = False
                 room.reset_game()
             return jsonify(room.game.get_status(request.remote_addr)), 200
@@ -589,10 +603,14 @@ def api_play_card(room_name):
             play = room.game.play_card(request.remote_addr, int(cardIndex.split(" ")[0]), str(cardIndex.split(" ")[1]))
         else:
             play = room.game.play_card(request.remote_addr, int(cardIndex))
-        if play[0]:
-            return play[1], 200
-        else:
-            return play[1], 404
+        try:
+            if play[0]:
+                return play[1], 200
+            else:
+                return play[1], 404
+        except TypeError as e:
+            print(e, play)  # why no work?
+            return "error", 404
     else:
         return "error", 403
 

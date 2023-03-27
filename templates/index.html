@@ -1,34 +1,114 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <title>OnlineUNOPython</title>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Online Uno Python</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i&amp;display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.0/css/all.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
     <script>
-        // reload the page every 5 seconds
         setInterval(function() {
             location.reload();
         }, 5000);
     </script>
 </head>
-<body>
-    <h1>Welcome {{ username }} to OnlineUNOPython!</h1>
-    <p>OnlineUNOPython is a web application that allows you to play the card game UNO with other players online.</p>
-    <p>It is currently in development.</p>
-    <p>For more information, please visit the <a href="{{ url_for('about') }}">About</a> page.</p>
-    <p>Edit your settings: <a href="{{ url_for('settings') }}">Here</a></p>
-    <p>Current Rooms:</p>
-    <ul>
-        {% for room in rooms %}
-            <li><a href="{{ url_for('room', room_name=room.name) }}">{{ room.name }}</a></li>
-        {% endfor %}
-    </ul>
-    <form action="{{ url_for('create_room') }}" method="post">
-        <input type="text" name="name" placeholder="Room Name">
-        <input type="password" name="password" placeholder="Open Party (No Password)">
-        <input type="submit" value="Create Room">
-    </form>
+<body id="page-top">
+    <div id="wrapper">
+        <nav class="navbar navbar-dark align-items-start sidebar sidebar-dark accordion bg-gradient-primary p-0">
+            <div class="container-fluid d-flex flex-column p-0"><a class="navbar-brand d-flex justify-content-center align-items-center sidebar-brand m-0" href="#">
+                    <div class="sidebar-brand-text mx-3"><span>Online UNO</span></div>
+                </a>
+                <hr class="sidebar-divider my-0">
+                <ul class="navbar-nav text-light" id="accordionSidebar">
+                    <li class="nav-item"><a class="nav-link active" href="index.html"><i class="fas fa-tachometer-alt"></i><span>Room List</span></a></li>
+                    <li class="nav-item"><a class="nav-link" href="settings.html"><i class="fas fa-user"></i><span>Profile</span></a></li>
+                </ul>
+                <div class="text-center d-none d-md-inline"><button class="btn rounded-circle border-0" id="sidebarToggle" type="button"></button></div>
+            </div>
+        </nav>
+        <div class="d-flex flex-column" id="content-wrapper">
+            <div id="content">
+                <div class="container-fluid" style="padding-top: 25px;">
+                    <h3 class="text-dark mb-4">Room List</h3>
+                    <p>Hi there {{ username }}. Please select a room or create one below!<br>To change your username edit your user settings in the Profile option in the left menu.</p>
+                    <div class="card shadow">
+                        <div class="card-header py-3">
+                            <p class="text-primary m-0 fw-bold"></p>
+                        </div>
+                        <div class="card-body">
+                            {% if rooms|length == 0 %}
+                                <p>There are no rooms available at the moment. Please try again later.</p>
+                            {% else %}
+                            <div class="table-responsive table mt-2" id="dataTable" role="grid" aria-describedby="dataTable_info">
+                                <table class="table my-0" id="dataTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Owner</th>
+                                            <th>Game Ongoing</th>
+                                            <th>Password</th>
+                                            <th>&nbsp;</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for room in rooms %}
+                                        <tr>
+                                            <td>{{ room.name }}</td>
+                                            <td>{{ room.host.name }}</td>
+                                            <td>{{ room.isPlaying }}</td>
+                                            <td>{{ room.isLocked }}</td>
+                                            <td><button class="btn btn-primary" type="button" onclick="window.location.href=`{{ url_for('room', room_name=room.name) }}`;"><i class="fas fa-arrow-circle-right"></i></button></td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td><strong>Name</strong></td>
+                                            <td><strong>Owner</strong></td>
+                                            <td><strong>Game Ongoing</strong></td>
+                                            <td><strong>Password</strong></td>
+                                            <td><strong>&nbsp;</strong></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                            {% endif %}
+                            <div class="row">
+                                <div class="col-md-6 align-self-center">
+                                    <p id="dataTable_info" class="dataTables_info" role="status" aria-live="polite">Showing 1 to {{ rooms|length }} of {{ rooms|length }}</p>
+                                </div>
+                                <div class="col-md-6"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card shadow" style="margin-top: 25px;">
+                        <div class="card-header py-3">
+                            <p class="text-primary m-0 fw-bold">Create a room</p>
+                        </div>
+                        <div class="card-body p-sm-5">
+                            <form action="{{ url_for('create_room') }}" method="post">
+                                <div class="mb-3"><input class="form-control" type="text" id="room-name" name="name" placeholder="Name" required="" minlength="1" maxlength="32"></div>
+                                <div class="mb-3"><input class="form-control" type="password" id="room-password" name="password" placeholder="Open Room (No Password)"></div>
+                                <div><button class="btn btn-primary d-block w-100 submit-btn" type="submit">Create Room</button></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <footer class="sticky-footer" style="padding: 0px;">
+                <div class="container my-auto">
+                    <div style="text-align: center;">
+                        <p style="color: grey;font-family: raleway;">© <a href="mailto:hello@bemz.info?subject=OnlineUNOPython Query">BEMZlabs</a> {{ current_year }}<br><a href="https://github.com/BEMZ01/OnlineUNOPython/">Source</a></p>
+                    </div>
+                </div>
+            </footer>
+        </div><a class="border rounded d-inline scroll-to-top" href="#page-top"><i class="fas fa-angle-up"></i></a>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </body>
 </html>

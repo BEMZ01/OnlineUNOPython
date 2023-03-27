@@ -6,3 +6,5 @@ What the client needs to see:
 
 What the server requests:
  - Player's choice of card / draw
+
+{'players':[{'ip_address': '192.168.56.1', 'name': 'name'}], 'game_started': False, 'game_status': {'winner': None, 'players': [], 'top_card': 'None', 'round': 0, 'max_rounds': 100, 'stack_count': 0, 'skip_next_player': False, 'main_deck_size': 112, 'discard_deck_size': 0, 'player_turn': {}, 'player_hand': []}}

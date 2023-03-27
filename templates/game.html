@@ -1,9 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <title>{{ room.name }}</title>
-    <script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Online Uno Python</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i&amp;display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.0/css/all.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+</head>
+
+<body style="height: 100%;width: 100%;">    <script>
         function toTitleCase(str) {
             return str.replace(/\w\S*/g, function(txt) {
                 return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
@@ -18,11 +27,9 @@
             xhr.responseType = "json";
             xhr.onload = () => {
                 if (xhr.status === 200) {
-                    console.log("Heartbeat OK");
                     // Update the game info
                     let toRender = [];
                     toRender.push("<p>Room Name: {{ room.name }}</p>");
-                    console.log(xhr.response);
                     toRender.push("<p>Discard Pile: " + xhr.response["discard_deck_size"] + "</p>");
                     toRender.push("<p>Main Pile: " + xhr.response["main_deck_size"] + "</p>");
                     toRender.push("<p>Current Player: " + xhr.response["player_turn"]["name"] + " (" + xhr.response["player_turn"]["hand_size"] + ")</p>");
@@ -30,9 +37,52 @@
                     let topCard = xhr.response["top_card"];
                     let topCardColor = topCard.split(" ")[1];
                     let topCardValue = topCard.split(" ")[0];
-                    toRender.push("<p>Top Card: <span style='color:" + topCardColor + "'>" + topCardValue + "</span></p>");
+                    let topcardDiv = document.getElementById("top-card");
+                    switch (topCardColor.toLowerCase()) {
+                        case "red":
+                            topcardDiv.innerHTML = `<div class="card-body" style="height: 40vh;background: radial-gradient(#ff7171 0%, #e72b2b 100%);border-radius: 13px;">
+                                            <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">${topCardValue}</span></header>
+                                            <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">${topCardValue}</span></header>
+                                        </div>`;
+                            break;
+                        case "blue":
+                            topcardDiv.innerHTML = `<div class="card-body" style="height: 40vh;background: radial-gradient(#7f7fff 0%, #2b2be7 100%);border-radius: 13px;">
+                                            <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">${topCardValue}</span></header>
+                                            <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">${topCardValue}</span></header>
+                                        </div>`;
+                            break;
+                        case "green":
+                            topcardDiv.innerHTML = `<div class="card-body" style="height: 40vh;background: radial-gradient(#7fff7f 0%, #2be72b 100%);border-radius: 13px;">
+                                            <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">${topCardValue}</span></header>
+                                            <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">${topCardValue}</span></header>
+                                        </div>`;
+                            break;
+                        case "yellow":
+                            topcardDiv.innerHTML = `<div class="card-body" style="height: 40vh;background: radial-gradient(#ffff79 0%, #e7e72b 100%);border-radius: 13px;">
+                                            <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">${topCardValue}</span></header>
+                                            <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">${topCardValue}</span></header>
+                                        </div>`;
+                            break;
+                        case "black":
+                            topcardDiv.innerHTML = `<div class="card-body" style="height: 40vh;background: radial-gradient(#262626 0%, #000000 100%);border-radius: 13px;">
+                                            <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">${topCardValue}</span></header>
+                                            <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">${topCardValue}</span></header>
+                                        </div>`;
+                            break;
+                    }
                     let gameInfo = document.getElementById("gameInfo");
                     gameInfo.innerHTML = toRender.join("");
+                    let playerList = document.getElementById("player_cards");
+                    playerList.innerHTML = "";
+                    let players = xhr.response["players"];
+                    for (let i = 0; i < players.length; i++) {
+                        let player = players[i];
+                        if (xhr.response["player_turn"]["name"] === player["name"]) {
+                            playerList.innerHTML += `<li style="font-weight: bold;">${player["name"]} (${player["hand_size"]})</li>`;
+                        } else {
+                            playerList.innerHTML += `<li>${player["name"]} (${player["hand_size"]})</li>`;
+                        }
+                    }
                     // Update the hand
                     let hand = document.getElementById("hand");
                     hand.innerHTML = "";
@@ -42,52 +92,237 @@
                         let card = handCards[i];
                         let cardColor = card.split(" ")[1];
                         let cardValue = card.split(" ")[0];
-                        let cardDiv = document.createElement("div");
-                        cardDiv.className = "card"+i;
-                        cardDiv.style.backgroundColor = cardColor;
-                        cardDiv.style.width = "100px";
-                        cardDiv.style.height = "150px";
-                        cardDiv.style.borderRadius = "10px";
-                        cardDiv.style.border = "1px solid black";
-                        cardDiv.style.display = "inline-block";
-                        cardDiv.style.margin = "10px";
-                        let cardButton = document.createElement("button");
-                        cardButton.onclick = function() {
-                            playCard(this.parentElement);
-                        };
-                        let cardText = document.createElement("p");
-                        cardText.style.color = "black";
-                        cardText.style.height = "auto";
-                        cardText.style.width = "100%";
-                        cardText.innerHTML = cardValue;
-                        cardButton.appendChild(cardText);
-                        cardDiv.appendChild(cardButton);
-                        hand.appendChild(cardDiv);
+                        switch (cardColor.toLowerCase()) {
+                            case "red":
+                                switch (cardValue.toLowerCase()) {
+                                    case "draw-two":
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#ff7171 0%, #e72b2b 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">+2</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">+2</span></header>
+                                                </div>
+                                            </div>
+                                        </div>`;
+                                        break;
+                                    case "skip":
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#ff7171 0%, #e72b2b 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">Skip</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">Skip</span></header>
+                                                </div>
+                                            </div>`;
+                                        break;
+                                    case "reverse":
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#ff7171 0%, #e72b2b 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">Reverse</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">Reverse</span></header>
+                                                </div>
+                                            </div>`;
+                                        break;
+                                    default:
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#ff7171 0%, #e72b2b 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">${cardValue}</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">${cardValue}</span></header>
+                                                </div>
+                                            </div>`;
+                                        break;
+                                }
+                                break;
+                            case "blue":
+                                switch (cardValue.toLowerCase()) {
+                                    case "draw-two":
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#7b7bff 0%, #2b2be7 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">+2</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">+2</span></header>
+                                                </div>
+                                            </div>
+                                        </div>`;
+                                        break;
+                                    case "skip":
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#7b7bff 0%, #2b2be7 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">Skip</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">Skip</span></header>
+                                                </div>
+                                            </div>`;
+                                        break;
+                                    case "reverse":
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#7b7bff 0%, #2b2be7 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">Reverse</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">Reverse</span></header>
+                                                </div>
+                                            </div>`;
+                                        break;
+                                    default:
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#7b7bff 0%, #2b2be7 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">${cardValue}</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">${cardValue}</span></header>
+                                                </div>
+                                            </div>`;
+                                        break;
+                                }
+                                break;
+                            case "green":
+                                switch (cardValue.toLowerCase()) {
+                                    case "draw-two":
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#7bff7b 0%, #2be72b 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">+2</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">+2</span></header>
+                                                </div>
+                                            </div>
+                                        </div>`;
+                                        break;
+                                    case "skip":
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#7bff7b 0%, #2be72b 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">Skip</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">Skip</span></header>
+                                                </div>
+                                            </div>`;
+                                        break;
+                                    case "reverse":
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#7bff7b 0%, #2be72b 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">Reverse</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">Reverse</span></header>
+                                                </div>
+                                            </div>`;
+                                        break;
+                                    default:
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#7bff7b 0%, #2be72b 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">${cardValue}</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">${cardValue}</span></header>
+                                                </div>
+                                            </div>`;
+                                        break;
+                                }
+                                break;
+                            case "yellow":
+                                switch (cardValue.toLowerCase()) {
+                                    case "draw-two":
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#ffff7b 0%, #e7e72b 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">+2</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">+2</span></header>
+                                                </div>
+                                            </div>
+                                        </div>`;
+                                        break;
+                                    case "skip":
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#ffff7b 0%, #e7e72b 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">Skip</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">Skip</span></header>
+                                                </div>
+                                            </div>`;
+                                        break;
+                                    case "reverse":
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#ffff7b 0%, #e7e72b 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">Reverse</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">Reverse</span></header>
+                                                </div>
+                                            </div>`;
+                                        break;
+                                    default:
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#ffff7b 0%, #e7e72b 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">${cardValue}</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">${cardValue}</span></header>
+                                                </div>
+                                            </div>`;
+                                        break;
+                                }
+                                break;
+                            case "black":
+                                switch(cardValue.toLowerCase()) {
+                                    case "wild-draw-four":
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#000000 0%, #000000 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">+4</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">+4</span></header>
+                                                </div>
+                                            </div>
+                                        </div>`;
+                                        break;
+                                    case "wild":
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#000000 0%, #000000 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">Wild</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">Wild</span></header>
+                                                </div>
+                                            </div>`;
+                                        break;
+                                    default:
+                                        hand.innerHTML += `<div class="col-md-3" style="margin-top: 2.5px;margin-bottom: 2.5px;">
+                                            <div class="card shadow" style="width: 100%;border-radius: 13px;">
+                                                <div class="card-body" style="height: 40vh;background: radial-gradient(#000000 0%, #000000 100%);border-radius: 13px;" onclick="playCard('${i}')">
+                                                    <header style="width: 100%;height: 50%;text-align: left;font-weight: bold;color: rgb(255,255,255);"><span style="width: 100%;height: 100%;font-size: 30px;">${cardValue}</span></header>
+                                                    <header style="width: 100%;text-align: right;font-weight: bold;color: rgb(255,255,255);margin-top: 12vh;"><span style="font-size: 30px;">${cardValue}</span></header>
+                                                </div>
+                                            </div>`;
+                                        break;
+                                }
+                                break;
+                        }
                     }
                     if (xhr.response["winner"] !== null) {
                         alert(xhr.response["winner"] + " has won the game!");
-                        window.location.href = window.location.href.split("/").slice(0, 3).join("/");
+                        // navigate to the room page
+                        // remove "/game" from window.location.href
+                        window.location.href = window.location.href.slice(0, window.location.href.lastIndexOf("/"));
                     }
                 } else if (xhr.status === 404) {
                     console.log("Room not found");
-                } else {
+                } else if (xhr.status === 500) {
+                    console.log("Internal server error, possibly due to server forgetting the room.");
+                    window.location.reload();
+                }
+                else {
                     console.log("Error: " + xhr.status);
                 }
             }
         }, 1000);
 
         // Function to send a request to play a card
-        function playCard(card) {
-            // if the background color is black and children do not contain the substring "draw"
-            if (card.style.backgroundColor === "black" && card.children[0].innerHTML.indexOf("draw") === -1) {
-                // get the color from the user
-                let color = prompt("What color do you want to play?").toLowerCase();
-                // if the color is valid
+        function playCard(cardIndex) {
+            let hand = document.getElementById("hand");
+            let card = hand.children[cardIndex];
+            console.log(card);
+            // if the card is black and not the draw card
+            if (card.children[0].children[0].style.background.includes(`rgb(0, 0, 0)`) && card.children[0].children[0].children[0].children[0].innerHTML !== "draw") {
+                // prompt the user to select a color
+                let color = prompt("Please enter a color (red, blue, green, or yellow)");
                 if (color === "red" || color === "blue" || color === "green" || color === "yellow") {
-                    // set the background color to the color
+                    // send the request to play the card
                     let xhr = new XMLHttpRequest();
                     xhr.open("POST", "/room/{{ room.name }}/api/play_card");
-                    xhr.send(card.className + " " + toTitleCase(color));
+                    xhr.send(`card${cardIndex} ${toTitleCase(color)}`)
                     xhr.responseType = "json";
                     xhr.onload = () => {
                         if (xhr.status === 200) {
@@ -99,12 +334,10 @@
                         }
                     }
                 }
-            }
-            else {
+            } else {
                 let xhr = new XMLHttpRequest();
                 xhr.open("POST", "/room/{{ room.name }}/api/play_card");
-                console.log(card.className)
-                xhr.send(card.className);
+                xhr.send(`card${cardIndex}`)
                 xhr.responseType = "json";
                 xhr.onload = () => {
                     if (xhr.status === 200) {
@@ -113,19 +346,123 @@
                         console.log("Room not found");
                     } else {
                         console.log("Error: " + xhr.status);
+                        }
                     }
                 }
-            }
         }
     </script>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-</head>
-<body>
-    <div id="gameInfo">
+    <div id="wrapper" style="height: 100%;">
+        <nav class="navbar navbar-dark align-items-start sidebar sidebar-dark accordion bg-gradient-primary p-0">
+            <div class="container-fluid d-flex flex-column p-0"><a class="navbar-brand d-flex justify-content-center align-items-center sidebar-brand m-0" href="#">
+                    <div class="sidebar-brand-text mx-3"><span>Online UNo</span></div>
+                </a>
+                <hr class="sidebar-divider my-0">
+                <ul class="navbar-nav text-light" id="accordionSidebar">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-tachometer-alt"></i><span>Room List</span></a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('settings') }}"><i class="fas fa-user"></i><span>Profile</span></a></li>
+                </ul>
+                <div class="text-center d-none d-md-inline"><button class="btn rounded-circle border-0" id="sidebarToggle" type="button"></button></div>
+            </div>
+        </nav>
+        <div class="d-flex flex-column" id="content-wrapper" style="height: 100%;">
+            <div id="content" style="height: 100%;">
+                <div class="container-fluid" style="padding-top: 25px;height: 100%;">
+                    <h3 class="text-dark mb-4">Room:&nbsp;{{ room.name }}</h3>
+                    <div class="row">
+                        <div class="col-md-6" style="height: 100%;">
+                            <div class="card shadow">
+                                <div class="card-header py-3">
+                                    <p class="text-primary m-0 fw-bold"></p>
+                                    <p class="text-primary m-0 fw-bold">Top Card</p>
+                                </div>
+                                <div class="card-body">
+                                    <div id="top-card" class="card shadow" style="width: 50%;border-radius: 13px;">
+                                        <p>Loading...</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card shadow" style="margin-top: 15px;">
+                                <div class="card-header py-3">
+                                    <p class="text-primary m-0 fw-bold"></p>
+                                    <p class="text-primary m-0 fw-bold">Actions</p>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        {% if host %}
+                                        {% if not room.game_started %}
+                                        <div class="col-md-3">
+                                            <form action="{{ url_for('api_start_game', room_name=room.name) }}" method="post">
+                                                <button class="btn btn-success" type="submit" style="width: 100%;">Start Game</button>
+                                            </form>
+                                        </div>
+                                        {% endif %}
+                                        <div class="col-md-3">
+                                            <form action="{{ url_for('api_leave', room_name=room.name) }}" method="post">
+                                                <button class="btn btn-danger" type="submit" style="width: 100%;">Disband Room</button>
+                                            </form>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <button class="btn btn-warning" type="button" style="width: 100%;" onclick="modifyRoom()">Modify Room</button>
+                                        </div>
+                                        <div class="col-md-3"></div>
+                                        <div class="row" id="roomSettings" style="margin-top: 15px"></div>
+                                        {% elif player %}
+                                        <div class="col-md-3">
+                                            <form action="{{ url_for('api_leave', room_name=room.name) }}" method="post">
+                                                <button class="btn btn-danger" type="submit" style="width: 100%;">Leave Room</button>
+                                            </form>
+                                        </div>
+                                        <div class="col-md-3"></div>
+                                        <div class="col-md-3"></div>
+                                        <div class="col-md-3"></div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card shadow" style="height: 100%;">
+                                <div class="card-header py-3">
+                                    <p class="text-primary m-0 fw-bold">Game Information</p>
+                                </div>
+                                <div class="card-body">
+                                    <p id="gameInfo">Loading</p>
+                                    <p>Cards:</p>
+                                    <ul id="player_cards">
+                                        <p>Loading...</p>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <div class="card shadow" style="margin-top: 15px;">
+                                <div class="card-header py-3">
+                                    <p class="text-primary m-0 fw-bold"></p>
+                                    <p class="text-primary m-0 fw-bold">Your Hand</p>
+                                </div>
+                                <div class="card-body">
+                                    <div id="hand" class="row">
+                                        <p>Loading...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <footer class="sticky-footer" style="padding: 0px;">
+                    <div class="container my-auto">
+                        <div style="text-align: center;">
+                            <p style="color: grey;font-family: raleway;">© <a href="mailto:hello@bemz.info?subject=OnlineUNOPython Query">BEMZlabs</a> {{ current_year }}<br><a href="https://github.com/BEMZ01/OnlineUNOPython/">Source</a></p>
+                        </div>
+                    </div>
+                </footer>
+            </div>
+        </div><a class="border rounded d-inline scroll-to-top" href="#top"><i class="fas fa-angle-up"></i></a>
     </div>
-    <div id="hand">
-    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 </body>
+
 </html>
