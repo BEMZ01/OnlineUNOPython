@@ -103,8 +103,6 @@ class Game:
         # 3. The card is the same type as the top card and the length
         # 4. The card is a Blank card
         top_card = self.DiscardDeck.GetTopCard()
-        print(top_card.type, card.type)
-        print(top_card.color, card.color)
         if card.type == "Wild" or card.type == "Wild-Draw-Four":
             return True
         elif card.color == top_card.color:
@@ -118,7 +116,6 @@ class Game:
                             i += 1
                         else:
                             break
-                    print(i)
                     break
                 if i < self.settings["MaxStack"]:
                     return True
@@ -434,7 +431,15 @@ def create_room():
 @app.route("/")
 def index():
     global rooms
-    return render_template("index.html", rooms=rooms.rooms, username=get_username(request.remote_addr))
+    out = []
+    for room in rooms.rooms:
+        out.append({
+            "name": room.name,
+            "host": get_username(room.host),
+            "isPlaying": room.game_started,
+            "isLocked": room.password is not None
+        })
+    return render_template("index.html", rooms=out, username=get_username(request.remote_addr))
 
 
 @app.route("/about")
@@ -450,6 +455,9 @@ def room(room_name):
         room.game_started
     except AttributeError:
         # Room doesn't exist
+        return redirect(url_for("index"))
+    # If room locked
+    if not (room.password is not None and request.args.get("password") == room.password):
         return redirect(url_for("index"))
     if not room.game_started:
         if request.remote_addr == room.host:
@@ -546,7 +554,10 @@ def api_leave(room_name):
         rooms.delete_room(room_name)
         return redirect(url_for("index"))
     else:
-        room.remove_player(request.remote_addr)
+        try:
+            room.remove_player(request.remote_addr)
+        except AttributeError:
+            return redirect(url_for("index"), 404)
         return redirect(url_for("index"))
 
 
@@ -609,14 +620,11 @@ def api_play_card(room_name):
             else:
                 return play[1], 404
         except TypeError as e:
-            print(e, play)  # why no work?
             return "error", 404
     else:
         return "error", 403
 
 
 if __name__ == "__main__":
-    # print cwd
-    print(os.getcwd())
     rooms = Room_Manager()
     app.run("0.0.0.0", 8080, debug=True)

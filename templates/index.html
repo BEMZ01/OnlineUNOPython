@@ -24,8 +24,8 @@
                 </a>
                 <hr class="sidebar-divider my-0">
                 <ul class="navbar-nav text-light" id="accordionSidebar">
-                    <li class="nav-item"><a class="nav-link active" href="index.html"><i class="fas fa-tachometer-alt"></i><span>Room List</span></a></li>
-                    <li class="nav-item"><a class="nav-link" href="settings.html"><i class="fas fa-user"></i><span>Profile</span></a></li>
+                    <li class="nav-item"><a class="nav-link active" href="#"><i class="fas fa-tachometer-alt"></i><span>Room List</span></a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('settings') }}"><i class="fas fa-user"></i><span>Profile</span></a></li>
                 </ul>
                 <div class="text-center d-none d-md-inline"><button class="btn rounded-circle border-0" id="sidebarToggle" type="button"></button></div>
             </div>
@@ -58,11 +58,21 @@
                                     {% for room in rooms %}
                                         <tr>
                                             <td>{{ room.name }}</td>
-                                            <td>{{ room.host.name }}</td>
-                                            <td>{{ room.isPlaying }}</td>
-                                            <td>{{ room.isLocked }}</td>
-                                            <td><button class="btn btn-primary" type="button" onclick="window.location.href=`{{ url_for('room', room_name=room.name) }}`;"><i class="fas fa-arrow-circle-right"></i></button></td>
-                                        </tr>
+                                            <td>{{ room.host }}</td>
+                                            {% if room.isPlaying %}
+                                                <td>Yes</td>
+                                            {% else %}
+                                                <td>No</td>
+                                            {% endif %}
+                                            {% if room.isLocked %}
+                                                <td>Yes</td>
+                                                <td><button class="btn btn-primary" type="button" onclick="let pass = prompt('Please enter the password for this room', 'Password');window.location.href=`{{ url_for('room', room_name=room.name, password=pass) }}${pass}`;"><i class="fas fa-arrow-circle-right"></i></button></td>
+
+                                            {% else %}
+                                                <td>No</td>
+                                                <td><button class="btn btn-primary" type="button" onclick="window.location.href=`{{ url_for('room', room_name=room.name) }}`;"><i class="fas fa-arrow-circle-right"></i></button></td>
+                                            {% endif %}
+                                            </tr>
                                     {% endfor %}
                                     </tbody>
                                     <tfoot>

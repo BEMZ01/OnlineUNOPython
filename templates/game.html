@@ -350,6 +350,91 @@
                     }
                 }
         }
+
+        // function that is called when host clicks "Modify Room"
+            function modifyRoom() {
+                let sett = new XMLHttpRequest();
+                sett.open("GET", "/room/{{ room.name }}/api/settings");
+                sett.send();
+                sett.responseType = "json";
+                sett.onload = () => {
+                    if (sett.status === 200) {
+                        let response = sett.response;
+                        console.log(sett.response);
+                        let roomSettings = document.getElementById("roomSettings");
+                        roomSettings.innerHTML = "";
+                        // create a form that the host can modify
+                        let form = document.createElement("form");
+                        form.action = "/room/{{ room.name }}/api/settings";
+                        form.method = "post";
+                        // create a label for each setting
+                        let label1 = document.createElement("label");
+                        label1.for = "AllowBlankCards";
+                        label1.innerHTML = "Allow Blank Cards: ";
+                        let label2 = document.createElement("label");
+                        label2.for = "MaxPlayers";
+                        label2.innerHTML = "Max Players: ";
+                        let label3 = document.createElement("label");
+                        label3.for = "MaxRounds";
+                        label3.innerHTML = "Max Rounds: ";
+                        let label4 = document.createElement("label");
+                        label4.for = "MaxStack";
+                        label4.innerHTML = "Max Stack: ";
+                        let label5 = document.createElement("label");
+                        label5.for = "StartingCards";
+                        label5.innerHTML = "Starting Cards: ";
+                        let checkbox1 = document.createElement("input");
+                        checkbox1.type = "checkbox";
+                        checkbox1.name = "AllowBlankCards";
+                        checkbox1.id = "AllowBlankCards";
+                        checkbox1.checked = response["AllowBlankCards"];
+                        let input2 = document.createElement("input");
+                        input2.type = "number";
+                        input2.name = "MaxPlayers";
+                        input2.id = "MaxPlayers";
+                        input2.value = response["MaxPlayers"];
+                        let input3 = document.createElement("input");
+                        input3.type = "number";
+                        input3.name = "MaxRounds";
+                        input3.id = "MaxRounds";
+                        input3.value = response["MaxRounds"];
+                        let input4 = document.createElement("input");
+                        input4.type = "number";
+                        input4.name = "MaxStack";
+                        input4.id = "MaxStack";
+                        input4.value = response["MaxStack"];
+                        let input5 = document.createElement("input");
+                        input5.type = "number";
+                        input5.name = "StartingCards";
+                        input5.id = "StartingCards";
+                        input5.value = response["StartingCards"];
+                        let submit = document.createElement("input");
+                        submit.type = "submit";
+                        submit.value = "Submit";
+                        // append all the elements to the form
+                        form.appendChild(label1);
+                        form.appendChild(checkbox1);
+                        form.appendChild(document.createElement("br"));
+                        form.appendChild(label2);
+                        form.appendChild(input2);
+                        form.appendChild(document.createElement("br"));
+                        form.appendChild(label3);
+                        form.appendChild(input3);
+                        form.appendChild(document.createElement("br"));
+                        form.appendChild(label4);
+                        form.appendChild(input4);
+                        form.appendChild(document.createElement("br"));
+                        form.appendChild(label5);
+                        form.appendChild(input5);
+                        form.appendChild(document.createElement("br"));
+                        form.appendChild(submit);
+                        // append the form to the roomSettings div
+                        roomSettings.appendChild(form);
+                    } else {
+                        console.log("Error: " + sett.status);
+                    }
+            }
+            }
     </script>
     <div id="wrapper" style="height: 100%;">
         <nav class="navbar navbar-dark align-items-start sidebar sidebar-dark accordion bg-gradient-primary p-0">
